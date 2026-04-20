@@ -1,11 +1,23 @@
+import { useNavigate } from 'react-router-dom'
+import useApplications from '../../hooks/useApplications'
+import { ROUTES } from '../../utils/constants'
+import ApplicationForm from './ApplicationForm'
+
 export default function AddApplicationPage() {
+  const navigate = useNavigate()
+  const { add } = useApplications()
+
+  async function handleCreate(values) {
+    add(values)
+    navigate(ROUTES.applications)
+  }
+
   return (
-    <section>
-      <p className="text-xs font-medium uppercase tracking-widest text-slate-400">Applications</p>
-      <h2 className="mt-2 text-2xl font-semibold tracking-tight text-slate-900 dark:text-slate-100">Add Application</h2>
-      <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-        Form sections will be added with react-hook-form and yup validation in an upcoming step.
-      </p>
-    </section>
+    <ApplicationForm
+      mode="add"
+      onCancel={() => navigate(ROUTES.applications)}
+      onSubmitForm={handleCreate}
+      submitLabel="Save Application"
+    />
   )
 }

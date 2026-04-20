@@ -19,6 +19,8 @@ export const PLATFORM_OPTIONS = [
 
 export const LOCATION_TYPE_OPTIONS = ['Remote', 'Hybrid', 'On-site']
 
+export const CURRENCY_OPTIONS = ['USD', 'INR', 'EUR', 'GBP']
+
 export const SORT_OPTIONS = [
   { value: 'appliedDate', label: 'Applied Date (Newest)' },
   { value: 'salary-desc', label: 'Salary (High to Low)' },
