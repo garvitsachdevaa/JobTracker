@@ -1,8 +1,10 @@
 import { yupResolver } from '@hookform/resolvers/yup'
+import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { Link } from 'react-router-dom'
 import * as yup from 'yup'
+import useJobFitScore from '../../hooks/useJobFitScore'
 import {
   APP_STATUS_OPTIONS,
   CURRENCY_OPTIONS,
@@ -69,6 +71,91 @@ function toDateInputValue(value) {
   return parsedValue.toISOString().slice(0, 10)
 }
 
+function scoreStrokeColor(score) {
+  if (score < 40) {
+    return '#f43f5e'
+  }
+
+  if (score < 70) {
+    return '#f59e0b'
+  }
+
+  return '#10b981'
+}
+
+function scoreLabel(score) {
+  if (score < 40) {
+    return 'Needs Work'
+  }
+
+  if (score < 70) {
+    return 'Moderate Fit'
+  }
+
+  return 'Strong Fit'
+}
+
+function FitScoreGauge({ score }) {
+  const radius = 58
+  const circumference = 2 * Math.PI * radius
+  const progress = (score / 100) * circumference
+  const strokeDashoffset = circumference - progress
+
+  return (
+    <div className="relative mx-auto h-40 w-40">
+      <svg className="h-full w-full -rotate-90" viewBox="0 0 140 140">
+        <circle cx="70" cy="70" fill="transparent" r={radius} stroke="#cbd5e1" strokeWidth="12" />
+        <motion.circle
+          animate={{ strokeDashoffset }}
+          cx="70"
+          cy="70"
+          fill="transparent"
+          initial={{ strokeDashoffset: circumference }}
+          r={radius}
+          stroke={scoreStrokeColor(score)}
+          strokeDasharray={circumference}
+          strokeLinecap="round"
+          strokeWidth="12"
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <p className="text-3xl font-semibold text-slate-900 dark:text-slate-100">{score}</p>
+        <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          {scoreLabel(score)}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function KeywordPills({ keywords, type }) {
+  if (keywords.length === 0) {
+    return (
+      <p className="text-xs text-slate-500 dark:text-slate-400">
+        {type === 'matched' ? 'No matched keywords yet.' : 'No missing keywords from your profile context.'}
+      </p>
+    )
+  }
+
+  return (
+    <div className="flex flex-wrap gap-2">
+      {keywords.map((keyword) => (
+        <span
+          className={[
+            'rounded-full border px-2.5 py-1 text-xs font-medium',
+            type === 'matched'
+              ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-500/50 dark:bg-emerald-500/15 dark:text-emerald-300'
+              : 'border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/50 dark:bg-amber-500/15 dark:text-amber-300',
+          ].join(' ')}
+          key={`${type}-${keyword}`}
+        >
+          {keyword}
+        </span>
+      ))}
+    </div>
+  )
+}
 function toIsoDateString(value) {
   if (!value) {
     return null
@@ -129,6 +216,7 @@ export default function ApplicationForm({
   submitLabel,
 }) {
   const [tagInput, setTagInput] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
 
   const defaultValues = useMemo(
     () => ({
@@ -171,11 +259,22 @@ export default function ApplicationForm({
   useEffect(() => {
     reset(defaultValues)
     setTagInput('')
+    setJobDescription('')
   }, [defaultValues, reset])
 
   const selectedStatus = watch('status')
   const selectedLocationType = watch('locationType')
+  const watchedCompany = watch('company')
+  const watchedRole = watch('role')
+  const watchedNotes = watch('notes')
   const tags = watch('tags') || []
+
+  const { score, matched, missing } = useJobFitScore(jobDescription, {
+    company: watchedCompany,
+    role: watchedRole,
+    notes: watchedNotes,
+    tags,
+  })
 
   useEffect(() => {
     if (selectedStatus === 'Applied') {
@@ -223,7 +322,7 @@ export default function ApplicationForm({
       followUpDate: values.followUpDate ? toIsoDateString(values.followUpDate) : null,
       notes: values.notes?.trim() || '',
       tags,
-      fitScore: initialData?.fitScore ?? 0,
+      fitScore: score,
       bookmarked: initialData?.bookmarked ?? false,
     }
 
@@ -449,6 +548,51 @@ export default function ApplicationForm({
               {...register('notes')}
             />
             <FieldError error={errors.notes} />
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-5 dark:border-slate-700 dark:bg-slate-900 lg:col-span-2">
+            <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">Job Fit Score</h3>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+              Paste a job description snippet to estimate fit based on your role, company context, notes, and tags.
+            </p>
+
+            <div className="mt-4">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="jobDescription">
+                Job Description Snippet
+              </label>
+              <textarea
+                className={fieldClassName(false)}
+                id="jobDescription"
+                onChange={(event) => setJobDescription(event.target.value)}
+                placeholder="Paste responsibilities and required skills here..."
+                rows={5}
+                value={jobDescription}
+              />
+            </div>
+
+            <div className="mt-5 grid gap-6 md:grid-cols-[200px,1fr] md:items-center">
+              <FitScoreGauge score={score} />
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Matched Keywords
+                  </p>
+                  <div className="mt-2">
+                    <KeywordPills keywords={matched} type="matched" />
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    Missing Keywords
+                  </p>
+                  <div className="mt-2">
+                    <KeywordPills keywords={missing.slice(0, 12)} type="missing" />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
