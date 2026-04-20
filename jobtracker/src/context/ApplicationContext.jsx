@@ -11,6 +11,9 @@ const defaultFilters = {
 }
 
 function normalizeApplication(application = {}) {
+  const createdAt = application.createdAt ?? application.appliedDate ?? new Date().toISOString()
+  const updatedAt = application.updatedAt ?? createdAt
+
   return {
     id: application.id ?? crypto.randomUUID(),
     company: application.company ?? '',
@@ -30,6 +33,8 @@ function normalizeApplication(application = {}) {
     fitScore: application.fitScore ?? 0,
     followUpDate: application.followUpDate ?? null,
     resumeVersion: application.resumeVersion ?? '',
+    createdAt,
+    updatedAt,
   }
 }
 
@@ -74,7 +79,12 @@ export function ApplicationProvider({ children }) {
 
   const addApplication = useCallback(
     (data) => {
-      const newApplication = normalizeApplication(data)
+      const timestamp = new Date().toISOString()
+      const newApplication = normalizeApplication({
+        ...data,
+        createdAt: data?.createdAt ?? timestamp,
+        updatedAt: timestamp,
+      })
       setApplications((previousApplications) => [newApplication, ...previousApplications])
       return newApplication
     },
@@ -95,6 +105,8 @@ export function ApplicationProvider({ children }) {
             ...application,
             ...data,
             id: application.id,
+            createdAt: application.createdAt,
+            updatedAt: new Date().toISOString(),
           })
 
           return updatedApplication
