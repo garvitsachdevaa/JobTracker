@@ -7,6 +7,14 @@ export default function useApplications() {
     updateApplication,
     deleteApplication,
     toggleBookmark,
+    filters,
+    setFilters,
+    sortBy,
+    setSortBy,
+    searchQuery,
+    setSearchQuery,
+    activeTab,
+    setActiveTab,
   } = useApplicationContext()
 
   return {
@@ -15,5 +23,13 @@ export default function useApplications() {
     update: updateApplication,
     delete: deleteApplication,
     toggleBookmark,
+    filters,
+    setFilters,
+    sortBy,
+    setSortBy,
+    searchQuery,
+    setSearchQuery,
+    activeTab,
+    setActiveTab,
   }
 }
