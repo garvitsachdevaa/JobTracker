@@ -7,12 +7,37 @@ import {
   isSameDay,
   parseISO,
   startOfDay,
+  startOfMonth,
+  subMonths,
 } from 'date-fns'
 import { animate, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import EmptyState from '../../components/EmptyState/EmptyState'
 import StatusBadge from '../../components/StatusBadge/StatusBadge'
 import useApplications from '../../hooks/useApplications'
+
+const STATUS_ORDER = ['Applied', 'Interviewing', 'Offer', 'Rejected', 'Ghosted']
+
+const STATUS_COLORS = {
+  Applied: '#3b82f6',
+  Interviewing: '#f59e0b',
+  Offer: '#10b981',
+  Rejected: '#f43f5e',
+  Ghosted: '#94a3b8',
+}
 
 function toDate(value) {
   if (!value) {
@@ -99,6 +124,31 @@ function StatCard({ children }) {
   )
 }
 
+function ChartCard({ children }) {
+  return (
+    <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
+      {children}
+    </section>
+  )
+}
+
+function ChartTooltip({ active, label, payload }) {
+  if (!active || !payload || payload.length === 0) {
+    return null
+  }
+
+  const point = payload[0]
+  const pointName = point?.name || point?.payload?.name || label || '--'
+  const pointValue = point?.value ?? point?.payload?.value ?? 0
+
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-sm dark:border-slate-700 dark:bg-slate-900">
+      <p className="font-medium text-slate-900 dark:text-slate-100">{pointName}</p>
+      <p className="mt-1 text-slate-600 dark:text-slate-300">Applications: {pointValue}</p>
+    </div>
+  )
+}
+
 function countdownBadge(interviewDate) {
   const today = startOfDay(new Date())
   const interviewDay = startOfDay(interviewDate)
@@ -117,6 +167,43 @@ function countdownBadge(interviewDate) {
 
 export default function DashboardPage() {
   const { applications } = useApplications()
+
+  const statusDistribution = useMemo(() => {
+    return STATUS_ORDER.map((status) => ({
+      name: status,
+      value: applications.filter((application) => application.status === status).length,
+    }))
+  }, [applications])
+
+  const monthlyApplications = useMemo(() => {
+    const monthBuckets = Array.from({ length: 6 }, (_, index) => {
+      const monthDate = subMonths(startOfMonth(new Date()), 5 - index)
+
+      return {
+        key: format(monthDate, 'yyyy-MM'),
+        monthLabel: format(monthDate, 'MMM yy'),
+        applications: 0,
+      }
+    })
+
+    const monthMap = new Map(monthBuckets.map((monthBucket) => [monthBucket.key, monthBucket]))
+
+    applications.forEach((application) => {
+      const appliedDate = toDate(application.appliedDate)
+      if (!appliedDate) {
+        return
+      }
+
+      const monthKey = format(appliedDate, 'yyyy-MM')
+      const matchingBucket = monthMap.get(monthKey)
+
+      if (matchingBucket) {
+        matchingBucket.applications += 1
+      }
+    })
+
+    return monthBuckets
+  }, [applications])
 
   const metrics = useMemo(() => {
     const total = applications.length
@@ -262,67 +349,119 @@ export default function DashboardPage() {
           title="No dashboard data yet"
         />
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
-            <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              Upcoming Interviews
-            </p>
+        <>
+          <div className="grid gap-6 xl:grid-cols-2">
+            <ChartCard>
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Status Distribution
+              </p>
+              <div className="mt-4 h-72">
+                <ResponsiveContainer height="100%" width="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusDistribution}
+                      dataKey="value"
+                      innerRadius={70}
+                      nameKey="name"
+                      outerRadius={96}
+                      paddingAngle={2}
+                    >
+                      {statusDistribution.map((entry) => (
+                        <Cell fill={STATUS_COLORS[entry.name]} key={entry.name} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                    <Legend iconType="circle" verticalAlign="bottom" />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
 
-            {upcomingInterviews.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">No interviews scheduled in the next 14 days.</p>
-            ) : (
-              <ul className="mt-4 space-y-3">
-                {upcomingInterviews.map((application) => (
-                  <li
-                    className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
-                    key={application.id}
-                  >
-                    <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{application.company}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{application.role}</p>
+            <ChartCard>
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Applications Per Month
+              </p>
+              <div className="mt-4 h-72">
+                <ResponsiveContainer height="100%" width="100%">
+                  <BarChart data={monthlyApplications} margin={{ top: 10, right: 8, left: -16, bottom: 4 }}>
+                    <CartesianGrid stroke="#33415522" strokeDasharray="3 3" />
+                    <XAxis
+                      axisLine={false}
+                      dataKey="monthLabel"
+                      tick={{ fill: '#64748b', fontSize: 12 }}
+                      tickLine={false}
+                    />
+                    <YAxis allowDecimals={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} tickLine={false} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: '#6366f11a' }} />
+                    <Bar dataKey="applications" fill="#4f46e5" radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </ChartCard>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Upcoming Interviews
+              </p>
+
+              {upcomingInterviews.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">No interviews scheduled in the next 14 days.</p>
+              ) : (
+                <ul className="mt-4 space-y-3">
+                  {upcomingInterviews.map((application) => (
+                    <li
+                      className="flex items-start justify-between gap-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700"
+                      key={application.id}
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{application.company}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{application.role}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                          {format(application.interviewDateValue, 'EEE, dd MMM yyyy')}
+                        </p>
+                      </div>
+
+                      <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                        {countdownBadge(application.interviewDateValue)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
+              <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                Recent Activity
+              </p>
+
+              {recentActivity.length === 0 ? (
+                <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">No recent application activity available.</p>
+              ) : (
+                <ul className="mt-4 space-y-4">
+                  {recentActivity.map((activity) => (
+                    <li className="relative pl-5" key={activity.id}>
+                      <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-indigo-500" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {activity.activityType} {activity.company} • {activity.role}
+                        </p>
+                        <StatusBadge status={activity.status} />
+                      </div>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {format(application.interviewDateValue, 'EEE, dd MMM yyyy')}
+                        {activity.activityDate
+                          ? `${formatDistanceToNow(activity.activityDate, { addSuffix: true })} • ${format(activity.activityDate, 'dd MMM yyyy')}`
+                          : '--'}
                       </p>
-                    </div>
-
-                    <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
-                      {countdownBadge(application.interviewDateValue)}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
-            <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              Recent Activity
-            </p>
-
-            {recentActivity.length === 0 ? (
-              <p className="mt-4 text-sm text-slate-600 dark:text-slate-300">No recent application activity available.</p>
-            ) : (
-              <ul className="mt-4 space-y-4">
-                {recentActivity.map((activity) => (
-                  <li className="relative pl-5" key={activity.id}>
-                    <span className="absolute left-0 top-2 h-2.5 w-2.5 rounded-full bg-indigo-500" />
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                        {activity.activityType} {activity.company} • {activity.role}
-                      </p>
-                      <StatusBadge status={activity.status} />
-                    </div>
-                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {activity.activityDate
-                        ? `${formatDistanceToNow(activity.activityDate, { addSuffix: true })} • ${format(activity.activityDate, 'dd MMM yyyy')}`
-                        : '--'}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </div>
+        </>
       )}
     </section>
   )
