@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'react-toastify'
 import useLocalStorage from '../hooks/useLocalStorage'
 import { fetchSeedApplications } from '../services/api'
 
@@ -43,6 +44,7 @@ const ApplicationContext = createContext(null)
 export function ApplicationProvider({ children }) {
   const [applications, setApplications] = useLocalStorage(APPLICATION_STORAGE_KEY, [])
   const hasAttemptedSeedRef = useRef(false)
+  const [offerCelebration, setOfferCelebration] = useState(null)
   const [filters, setFiltersState] = useState(defaultFilters)
   const [sortBy, setSortBy] = useState('appliedDate')
   const [searchQuery, setSearchQuery] = useState('')
@@ -86,6 +88,7 @@ export function ApplicationProvider({ children }) {
         updatedAt: timestamp,
       })
       setApplications((previousApplications) => [newApplication, ...previousApplications])
+      toast.success(`Application added for ${newApplication.company || 'the company'}.`)
       return newApplication
     },
     [setApplications],
@@ -94,12 +97,15 @@ export function ApplicationProvider({ children }) {
   const updateApplication = useCallback(
     (id, data) => {
       let updatedApplication = null
+      let previousStatus = null
 
       setApplications((previousApplications) =>
         previousApplications.map((application) => {
           if (application.id !== id) {
             return application
           }
+
+          previousStatus = application.status
 
           updatedApplication = normalizeApplication({
             ...application,
@@ -113,6 +119,20 @@ export function ApplicationProvider({ children }) {
         }),
       )
 
+      if (updatedApplication) {
+        if (previousStatus !== 'Offer' && updatedApplication.status === 'Offer') {
+          const company = updatedApplication.company || 'this company'
+          setOfferCelebration({
+            company,
+            id: updatedApplication.id,
+            triggeredAt: Date.now(),
+          })
+          toast.success(`Congratulations! 🎉 You got an offer at ${company}!`)
+        } else {
+          toast.success(`Application updated for ${updatedApplication.company || 'the company'}.`)
+        }
+      }
+
       return updatedApplication
     },
     [setApplications],
@@ -120,30 +140,55 @@ export function ApplicationProvider({ children }) {
 
   const deleteApplication = useCallback(
     (id) => {
-      setApplications((previousApplications) =>
-        previousApplications.filter((application) => application.id !== id),
-      )
+      let deletedCompany = 'application'
+
+      setApplications((previousApplications) => {
+        const deletedApplication = previousApplications.find((application) => application.id === id)
+        if (deletedApplication?.company) {
+          deletedCompany = deletedApplication.company
+        }
+
+        return previousApplications.filter((application) => application.id !== id)
+      })
+
+      toast.info(`Deleted ${deletedCompany}.`)
     },
     [setApplications],
   )
 
   const toggleBookmark = useCallback(
     (id) => {
+      let bookmarkEnabled = false
+      let companyName = 'application'
+
       setApplications((previousApplications) =>
         previousApplications.map((application) => {
           if (application.id !== id) {
             return application
           }
 
+          bookmarkEnabled = !application.bookmarked
+          companyName = application.company || companyName
+
           return {
             ...application,
-            bookmarked: !application.bookmarked,
+            bookmarked: bookmarkEnabled,
           }
         }),
+      )
+
+      toast.info(
+        bookmarkEnabled
+          ? `${companyName} bookmarked.`
+          : `${companyName} removed from bookmarks.`,
       )
     },
     [setApplications],
   )
+
+  const clearOfferCelebration = useCallback(() => {
+    setOfferCelebration(null)
+  }, [])
 
   const setFilters = useCallback((nextFilters) => {
     if (typeof nextFilters === 'function') {
@@ -172,13 +217,17 @@ export function ApplicationProvider({ children }) {
       setSearchQuery,
       activeTab,
       setActiveTab,
+      offerCelebration,
+      clearOfferCelebration,
     }),
     [
       activeTab,
       addApplication,
       applications,
+      clearOfferCelebration,
       deleteApplication,
       filters,
+      offerCelebration,
       searchQuery,
       setFilters,
       sortBy,

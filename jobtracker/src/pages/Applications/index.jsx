@@ -1,6 +1,6 @@
 import { format } from 'date-fns'
 import { useMemo, useState } from 'react'
-import { FiBookmark, FiEdit2, FiTrash2 } from 'react-icons/fi'
+import { FiBookmark, FiDownload, FiEdit2, FiTrash2 } from 'react-icons/fi'
 import { Link } from 'react-router-dom'
 import EmptyState from '../../components/EmptyState/EmptyState'
 import Filters from '../../components/Filters/Filters'
@@ -9,6 +9,7 @@ import SearchBar from '../../components/SearchBar/SearchBar'
 import StatusBadge from '../../components/StatusBadge/StatusBadge'
 import useApplications from '../../hooks/useApplications'
 import useDebounce from '../../hooks/useDebounce'
+import { exportApplicationsToCsv } from '../../utils/helpers'
 import { ROUTES } from '../../utils/constants'
 
 function formatAppliedDate(appliedDate) {
@@ -115,6 +116,8 @@ export default function ApplicationsPage() {
     setSearchQuery,
     activeTab,
     setActiveTab,
+    isGhostedSuggestion,
+    markAsGhosted,
   } = useApplications()
 
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -171,6 +174,11 @@ export default function ApplicationsPage() {
   const hasAnyApplications = applications.length > 0
   const hasVisibleApplications = filteredApplications.length > 0
 
+  function handleExportCsv() {
+    const fileDate = format(new Date(), 'yyyy-MM-dd')
+    exportApplicationsToCsv(applications, `job-applications-${fileDate}.csv`)
+  }
+
   return (
     <section className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
@@ -184,12 +192,24 @@ export default function ApplicationsPage() {
           </p>
         </div>
 
-        <Link
-          className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-indigo-500"
-          to={ROUTES.addApplication}
-        >
-          + Add Application
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-150 hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-slate-500"
+            disabled={!hasAnyApplications}
+            onClick={handleExportCsv}
+            type="button"
+          >
+            <FiDownload className="h-4 w-4" />
+            <span>Export CSV</span>
+          </button>
+
+          <Link
+            className="inline-flex items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white transition-colors duration-150 hover:bg-indigo-500"
+            to={ROUTES.addApplication}
+          >
+            + Add Application
+          </Link>
+        </div>
       </header>
 
       <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
@@ -271,6 +291,18 @@ export default function ApplicationsPage() {
                   </td>
                   <td className="px-4 py-4 text-sm text-slate-700 dark:text-slate-200">
                     <StatusBadge status={application.status} />
+                    {isGhostedSuggestion(application.id) ? (
+                      <div className="mt-2 rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800 dark:border-amber-500/60 dark:bg-amber-500/15 dark:text-amber-200">
+                        <p>No response in 21+ days.</p>
+                        <button
+                          className="mt-1 font-semibold underline underline-offset-2"
+                          onClick={() => markAsGhosted(application.id)}
+                          type="button"
+                        >
+                          Mark as Ghosted?
+                        </button>
+                      </div>
+                    ) : null}
                   </td>
                   <td className="px-4 py-4 text-sm font-medium text-slate-800 dark:text-slate-200">
                     {formatSalary(application)}
