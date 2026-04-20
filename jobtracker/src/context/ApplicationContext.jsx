@@ -45,6 +45,7 @@ export function ApplicationProvider({ children }) {
   const [applications, setApplications] = useLocalStorage(APPLICATION_STORAGE_KEY, [])
   const hasAttemptedSeedRef = useRef(false)
   const [offerCelebration, setOfferCelebration] = useState(null)
+  const [isInitializing, setIsInitializing] = useState(false)
   const [filters, setFiltersState] = useState(defaultFilters)
   const [sortBy, setSortBy] = useState('appliedDate')
   const [searchQuery, setSearchQuery] = useState('')
@@ -56,6 +57,7 @@ export function ApplicationProvider({ children }) {
     }
 
     hasAttemptedSeedRef.current = true
+    setIsInitializing(true)
     let isActive = true
 
     async function seedApplications() {
@@ -69,6 +71,10 @@ export function ApplicationProvider({ children }) {
         setApplications(seededApplications.map((application) => normalizeApplication(application)))
       } catch (error) {
         console.error('Unable to seed applications from dummyjson.', error)
+      } finally {
+        if (isActive) {
+          setIsInitializing(false)
+        }
       }
     }
 
@@ -219,6 +225,7 @@ export function ApplicationProvider({ children }) {
       setActiveTab,
       offerCelebration,
       clearOfferCelebration,
+      isInitializing,
     }),
     [
       activeTab,
@@ -227,6 +234,7 @@ export function ApplicationProvider({ children }) {
       clearOfferCelebration,
       deleteApplication,
       filters,
+      isInitializing,
       offerCelebration,
       searchQuery,
       setFilters,

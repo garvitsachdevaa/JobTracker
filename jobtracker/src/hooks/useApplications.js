@@ -26,6 +26,7 @@ export default function useApplications() {
     setSearchQuery,
     activeTab,
     setActiveTab,
+    isInitializing,
   } = useApplicationContext()
 
   const ghostedSuggestions = useMemo(() => {
@@ -83,5 +84,6 @@ export default function useApplications() {
     ghostedSuggestions,
     markAsGhosted,
     isGhostedSuggestion,
+    isInitializing,
   }
 }

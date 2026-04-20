@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useMemo, useRef } from 'react'
+import { memo, useMemo, useRef } from 'react'
 import { FiMapPin } from 'react-icons/fi'
 import StatusBadge from '../StatusBadge/StatusBadge'
 
@@ -75,7 +75,7 @@ function resolveTargetColumn(point, columnRefs) {
   return null
 }
 
-function KanbanCard({ application, boardRef, onDragEnd }) {
+const KanbanCard = memo(function KanbanCard({ application, boardRef, onDragEnd }) {
   return (
     <motion.article
       className="cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm active:cursor-grabbing dark:border-slate-700 dark:bg-slate-900"
@@ -107,7 +107,7 @@ function KanbanCard({ application, boardRef, onDragEnd }) {
       </div>
     </motion.article>
   )
-}
+})
 
 export default function KanbanBoard({ applications, onStatusChange }) {
   const boardRef = useRef(null)
