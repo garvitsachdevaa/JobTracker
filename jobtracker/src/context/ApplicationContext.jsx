@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import useLocalStorage from '../hooks/useLocalStorage'
+import { fetchSeedApplications } from '../services/api'
 
 const APPLICATION_STORAGE_KEY = 'jobtracker.applications'
 
@@ -36,10 +37,40 @@ const ApplicationContext = createContext(null)
 
 export function ApplicationProvider({ children }) {
   const [applications, setApplications] = useLocalStorage(APPLICATION_STORAGE_KEY, [])
+  const hasAttemptedSeedRef = useRef(false)
   const [filters, setFiltersState] = useState(defaultFilters)
   const [sortBy, setSortBy] = useState('appliedDate')
   const [searchQuery, setSearchQuery] = useState('')
   const [activeTab, setActiveTab] = useState('table')
+
+  useEffect(() => {
+    if (applications.length > 0 || hasAttemptedSeedRef.current) {
+      return
+    }
+
+    hasAttemptedSeedRef.current = true
+    let isActive = true
+
+    async function seedApplications() {
+      try {
+        const seededApplications = await fetchSeedApplications(10)
+
+        if (!isActive || seededApplications.length === 0) {
+          return
+        }
+
+        setApplications(seededApplications.map((application) => normalizeApplication(application)))
+      } catch (error) {
+        console.error('Unable to seed applications from dummyjson.', error)
+      }
+    }
+
+    seedApplications()
+
+    return () => {
+      isActive = false
+    }
+  }, [applications.length, setApplications])
 
   const addApplication = useCallback(
     (data) => {
