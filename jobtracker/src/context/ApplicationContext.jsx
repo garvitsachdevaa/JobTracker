@@ -59,6 +59,7 @@ export function ApplicationProvider({ children }) {
     hasAttemptedSeedRef.current = true
     setIsInitializing(true)
     let isActive = true
+    let didComplete = false
 
     async function seedApplications() {
       try {
@@ -72,6 +73,7 @@ export function ApplicationProvider({ children }) {
       } catch (error) {
         console.error('Unable to seed applications from dummyjson.', error)
       } finally {
+        didComplete = true
         if (isActive) {
           setIsInitializing(false)
         }
@@ -82,6 +84,12 @@ export function ApplicationProvider({ children }) {
 
     return () => {
       isActive = false
+
+      // In Strict Mode, React may teardown a still-running effect and remount immediately.
+      // Reset this gate only if the async seed did not finish, so the remount can retry cleanly.
+      if (!didComplete) {
+        hasAttemptedSeedRef.current = false
+      }
     }
   }, [applications.length, setApplications])
 

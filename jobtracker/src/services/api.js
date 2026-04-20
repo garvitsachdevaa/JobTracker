@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const api = axios.create({
   baseURL: 'https://dummyjson.com',
-  timeout: 10000,
+  timeout: 4500,
 })
 
 const seedStatuses = ['Applied', 'Interviewing', 'Offer', 'Rejected', 'Ghosted']
@@ -32,6 +32,79 @@ const seedRoles = [
   'Platform Engineer',
   'Web Engineer',
   'Application Developer',
+]
+
+const fallbackSeedProducts = [
+  {
+    title: 'Nova Commerce',
+    brand: 'Nova Commerce',
+    category: 'Ecommerce',
+    description: 'Building storefront experiences and checkout optimizations.',
+    price: 74,
+  },
+  {
+    title: 'Skyline Health',
+    brand: 'Skyline Health',
+    category: 'HealthTech',
+    description: 'Patient engagement dashboard and appointment workflows.',
+    price: 68,
+  },
+  {
+    title: 'Ledger Loop',
+    brand: 'Ledger Loop',
+    category: 'FinTech',
+    description: 'Modern financial operations tooling for startups.',
+    price: 82,
+  },
+  {
+    title: 'Atlas Mobility',
+    brand: 'Atlas Mobility',
+    category: 'SaaS',
+    description: 'Fleet operations and route intelligence platform.',
+    price: 71,
+  },
+  {
+    title: 'Pulse Metrics',
+    brand: 'Pulse Metrics',
+    category: 'Analytics',
+    description: 'Realtime dashboards and product analytics suite.',
+    price: 76,
+  },
+  {
+    title: 'Orbit Labs',
+    brand: 'Orbit Labs',
+    category: 'Developer Tools',
+    description: 'CI insights and engineering productivity workflows.',
+    price: 79,
+  },
+  {
+    title: 'Fjord Studio',
+    brand: 'Fjord Studio',
+    category: 'Design Systems',
+    description: 'Component platform for consistent product UI.',
+    price: 66,
+  },
+  {
+    title: 'Beacon Security',
+    brand: 'Beacon Security',
+    category: 'Cybersecurity',
+    description: 'Identity protection and security posture tooling.',
+    price: 88,
+  },
+  {
+    title: 'Harvest Grid',
+    brand: 'Harvest Grid',
+    category: 'ClimateTech',
+    description: 'Energy monitoring and sustainability operations.',
+    price: 73,
+  },
+  {
+    title: 'Cobalt Cloud',
+    brand: 'Cobalt Cloud',
+    category: 'Cloud',
+    description: 'Infrastructure automation and cloud governance.',
+    price: 84,
+  },
 ]
 
 function toIsoDateWithOffset(dayOffset) {
@@ -75,9 +148,18 @@ function mapProductToApplication(product, index) {
 }
 
 export async function fetchSeedApplications(limit = 10) {
-  const response = await api.get(`/products?limit=${limit}`)
-  const products = Array.isArray(response?.data?.products) ? response.data.products : []
-  return products.map(mapProductToApplication).slice(0, 10)
+  try {
+    const response = await api.get(`/products?limit=${limit}`)
+    const products = Array.isArray(response?.data?.products) ? response.data.products : []
+
+    if (products.length > 0) {
+      return products.map(mapProductToApplication).slice(0, limit)
+    }
+  } catch (error) {
+    console.warn('Seed API unavailable. Using local starter data instead.', error)
+  }
+
+  return fallbackSeedProducts.map(mapProductToApplication).slice(0, limit)
 }
 
 export default api
