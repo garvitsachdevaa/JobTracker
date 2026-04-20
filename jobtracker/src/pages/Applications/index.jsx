@@ -104,6 +104,7 @@ function emptyStateAction() {
 export default function ApplicationsPage() {
   const {
     applications,
+    update,
     delete: deleteApplication,
     toggleBookmark,
     filters,
@@ -220,7 +221,10 @@ export default function ApplicationsPage() {
 
       {hasVisibleApplications && activeTab === 'kanban' ? (
         <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-700/60 dark:bg-slate-900">
-          <KanbanBoard />
+          <KanbanBoard
+            applications={filteredApplications}
+            onStatusChange={(id, status) => update(id, { status })}
+          />
         </div>
       ) : null}
 
