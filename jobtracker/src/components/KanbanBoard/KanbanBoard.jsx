@@ -57,6 +57,8 @@ function aggregateSalaryRange(cards) {
 }
 
 function resolveTargetColumn(point, columnRefs) {
+  // Both framer-motion's info.point and getBoundingClientRect() are viewport-relative,
+  // so this drop hit-test remains correct even when the page has been scrolled.
   for (const column of KANBAN_COLUMNS) {
     const columnElement = columnRefs.current[column]
     if (!columnElement) {

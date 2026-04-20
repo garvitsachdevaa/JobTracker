@@ -110,12 +110,12 @@ function PercentageRing({ label, value }) {
   )
 }
 
-function StatCard({ children }) {
+function StatCard({ children, delay = 0 }) {
   return (
     <motion.article
       className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/60 dark:bg-slate-900"
       initial={{ opacity: 0, y: 8 }}
-      transition={{ duration: 0.25 }}
+      transition={{ duration: 0.25, delay }}
       viewport={{ once: true }}
       whileInView={{ opacity: 1, y: 0 }}
     >
@@ -242,8 +242,7 @@ export default function DashboardPage() {
       }
 
       const followUpDay = startOfDay(followUpDate)
-      return (isAfter(followUpDay, today) || isSameDay(followUpDay, today)) &&
-        (isBefore(followUpDay, reminderEnd) || isSameDay(followUpDay, reminderEnd))
+      return isBefore(followUpDay, reminderEnd) || isSameDay(followUpDay, reminderEnd)
     })
   }, [applications])
 
@@ -313,32 +312,32 @@ export default function DashboardPage() {
         >
           <p className="text-xs font-medium uppercase tracking-widest text-amber-700 dark:text-amber-300">Follow-up reminder</p>
           <p className="mt-1 text-sm font-medium text-amber-800 dark:text-amber-200">
-            You have {followUpDueSoon.length} follow-up{followUpDueSoon.length > 1 ? 's' : ''} due soon.
+            You have {followUpDueSoon.length} follow-up{followUpDueSoon.length > 1 ? 's' : ''} due or overdue.
           </p>
         </motion.div>
       ) : null}
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-        <StatCard>
+        <StatCard delay={0}>
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Total Applications</p>
           <AnimatedNumber className="mt-3 text-3xl font-semibold text-slate-900 dark:text-slate-100" value={metrics.total} />
         </StatCard>
 
-        <StatCard>
+        <StatCard delay={0.05}>
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Interviewing</p>
           <AnimatedNumber className="mt-3 text-3xl font-semibold text-slate-900 dark:text-slate-100" value={metrics.interviewing} />
         </StatCard>
 
-        <StatCard>
+        <StatCard delay={0.1}>
           <p className="text-xs font-medium uppercase tracking-widest text-slate-500 dark:text-slate-400">Offers Received</p>
           <AnimatedNumber className="mt-3 text-3xl font-semibold text-slate-900 dark:text-slate-100" value={metrics.offers} />
         </StatCard>
 
-        <StatCard>
+        <StatCard delay={0.15}>
           <PercentageRing label="Rejection Rate" value={metrics.rejectionRate} />
         </StatCard>
 
-        <StatCard>
+        <StatCard delay={0.2}>
           <PercentageRing label="Response Rate" value={metrics.responseRate} />
         </StatCard>
       </div>

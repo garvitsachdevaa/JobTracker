@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FiBarChart2, FiBookmark, FiBriefcase, FiGrid, FiMoon, FiPlusCircle, FiSun } from 'react-icons/fi'
 import { NavLink } from 'react-router-dom'
-import useApplications from '../../hooks/useApplications'
+import { useApplicationContext } from '../../context/ApplicationContext'
 
 const primaryLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: FiGrid },
@@ -29,8 +29,18 @@ function mobileNavClassName({ isActive }) {
   ].join(' ')
 }
 
+function ApplicationsCountBadge() {
+  const { applications } = useApplicationContext()
+  const applicationCount = useMemo(() => applications.length, [applications.length])
+
+  return (
+    <span className="ml-auto hidden rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300 xl:inline-flex">
+      {applicationCount}
+    </span>
+  )
+}
+
 export default function SidebarLayout({ children }) {
-  const { applications } = useApplications()
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') {
       return 'light'
@@ -72,11 +82,7 @@ export default function SidebarLayout({ children }) {
               <NavLink key={item.to} className={navClassName} to={item.to}>
                 <Icon className="h-4 w-4 shrink-0" />
                 <span className="hidden xl:inline">{item.label}</span>
-                {item.to === '/applications' ? (
-                  <span className="ml-auto hidden rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-slate-800 dark:text-slate-300 xl:inline-flex">
-                    {applications.length}
-                  </span>
-                ) : null}
+                {item.to === '/applications' ? <ApplicationsCountBadge /> : null}
               </NavLink>
             )
           })}
